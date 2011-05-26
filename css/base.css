@@ -1,3 +1,28 @@
 /*
 wrtbwmon_php stylesheet
 */
+
+*{
+	font-family: Verdana, sans-serif;
+}
+
+#usage-by-user-table{
+	
+}
+
+#usage-by-user-table tr{
+	
+}
+
+#usage-by-user-table td{
+	
+}
+
+.user-totals-row{
+	background: gray;
+}
+
+.grand-total-cell{
+	background: red;
+	font-weight: bold;
+}

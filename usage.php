@@ -68,10 +68,10 @@ class BWDatabase{
 			foreach($lines as $line){
 				$line = explode(",", $line);
 				$usage[$line[0]] = array(
-					"down"	=> $line[1],
-					"up"	=> $line[2],
-					"odown"	=> $line[3],
-					"oup"	=> $line[4],
+					"down"	=> $line[1] * 1024,
+					"up"	=> $line[2] * 1024,
+					"odown"	=> $line[3] * 1024,
+					"oup"	=> $line[4] * 1024,
 					"last"	=> $line[5]
 				);
 			} //ends foreach
@@ -155,13 +155,32 @@ class BWDatabase{
 
 		}
 
+		function array_values_as_cells($array, $hidden_keys = ""){
+			$output = "";
+			if(!$hidden_keys){
+				foreach($array as $key => $value) {
+					$output .= "<td>$value</td>";
+				}
+			} else {
+				$hidden_keys = explode(" ", $hidden_keys);
+				foreach($array as $key => $value) {
+					if(!in_array($key, $hidden_keys)){
+						$output .= "<td>$value</td>";
+					} else {
+						$output .= "<td style=\"display: none;\">$value</td>";
+					}
+				}
+			}
+			return $output;
+		}
+
 		function output_as_table($display_offpeak = True){
 			if($this->usage_by_user == False){
 				$this->calculate_usage_by_user();
 			}
 ?>
 
-<table>
+<table id="usage-by-user-table">
 	<tr>
 		<th>User</th>
 		<th>MAC Address</th>
@@ -189,7 +208,7 @@ class BWDatabase{
 				echo("<td>$mac</td>");
 				foreach($this->usage_by_user[$username][$mac] as $key => $value) {
 					if(in_array($key, explode(" ", "up down oup odown"))){
-						$value = human_size($value * 1024);
+						$value = human_size($value);
 						if($display_offpeak == False){
 							if($key == "oup" || $key == "odown"){
 								echo("<td style=\"display: none;\">$value</td>");
@@ -212,24 +231,16 @@ class BWDatabase{
 					echo("<td></td><td></td>");
 
 					$totals = array(
-						"down" => $this->user_total($username, "down"),
-						"up" => $this->user_total($username, "up"),
-						"odown" => $this->user_total($username, "odown"),
-						"oup" => $this->user_total($username, "oup")
+						"down" => human_size($this->user_total($username, "down")),
+						"up" => human_size($this->user_total($username, "up")),
+						"odown" => human_size($this->user_total($username, "odown")),
+						"oup" => human_size($this->user_total($username, "oup"))
 					);
 
-					foreach($totals as $key => $value){
-						$total = human_size($value * 1024);
-						if($display_offpeak == True) {
-							echo("<td>$total</td>");
-						} else {
-							if($key == "odown" || $key == "oup"){
-								echo("<td style=\"display: none;\">$total</td>");
-							} else {
-								echo("<td>$total</td>");
-							}
-						}
-
+					if($display_offpeak == True){
+						echo($this->array_values_as_cells($totals));
+					} else {
+						echo($this->array_values_as_cells($totals, "oup odown"));
 					}
 
 					echo("<td></td>");
@@ -244,19 +255,18 @@ class BWDatabase{
 		// Output grand totals row.
 		echo("<tr class=\"totals-row\">");
 		$totals = $this->total();
+		array_walk($totals, function(&$size) {
+			$size = human_size($size);
+		});
+
 		echo("<td></td><td></td>");
-		foreach($totals as $key => $value){
-			$total = human_size($value * 1024);
-			if($display_offpeak == True){
-				echo("<td>$total</td>");
-			} else {
-				if($key == "odown" || $key == "oup"){
-					echo("<td style=\"display: none;\">$total</td>");
-				} else {
-					echo("<td>$total</td>");
-				}
-			}
+
+		if($display_offpeak == True){
+			echo($this->array_values_as_cells($totals));
+		} else {
+			echo($this->array_values_as_cells($totals, "oup odown"));
 		}
+
 		echo("</tr>");
 
 	?>
@@ -276,13 +286,13 @@ $bwdb = new BWDatabase($WRTBWMON_DB, $ALIASES);
 
 <html>
 <head>
-	<title>DD-WRT Bandwidth Monitor</title>
+	<title></title>
 	<link rel="stylesheet" type="text/css" href="css/base.css" />
 </head>
 
 <body>
 
-	<h1>DD-WRT Bandwidth Monitor</h1>
+	<h1></h1>
 
 	<?php $bwdb->output_as_table($display_offpeak = False); ?>
 
