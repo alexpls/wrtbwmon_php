@@ -45,6 +45,7 @@ class BWDatabase{
 
 		function validate_db($DB_PATH){
 			// Database validation.
+			// **Really needs to be worked on...
 			if (!file_exists($DB_PATH)) {
 				return False;
 			}
@@ -66,13 +67,13 @@ class BWDatabase{
 			$lines = $this->output_lines($this->db_file);
 			foreach($lines as $line){
 				$line = explode(",", $line);
-				$usage[$line[0]]	=	array(
-											"down"	=> $line[1],
-											"up"	=> $line[2],
-											"odown"	=> $line[3],
-											"oup"	=> $line[4],
-											"last"	=> $line[5]
-										);
+				$usage[$line[0]] = array(
+					"down"	=> $line[1],
+					"up"	=> $line[2],
+					"odown"	=> $line[3],
+					"oup"	=> $line[4],
+					"last"	=> $line[5]
+				);
 			} //ends foreach
 			$this->usage = $usage;
 		}
@@ -154,7 +155,7 @@ class BWDatabase{
 
 		}
 
-		function output_as_table(){
+		function output_as_table($display_offpeak = True){
 			if($this->usage_by_user == False){
 				$this->calculate_usage_by_user();
 			}
@@ -166,50 +167,69 @@ class BWDatabase{
 		<th>MAC Address</th>
 		<th>Data Down</th>
 		<th>Data Up</th>
-		<th>Offpeak Data Down</th>
-		<th>Offpeak Data Up</th>
+		<th<?php if ($display_offpeak == False) {?> style="display: none;"<?php } ?>>Offpeak Data Down</th>
+		<th<?php if ($display_offpeak == False) {?> style="display: none;"<?php } ?>></th>
 		<th>Last Seen</th>
 	</tr>
 	
 	<?php 
 
-		foreach(array_keys($this->usage_by_user) as $username){
+		foreach($this->usage_by_user as $username => $machines){
 			$i = 1;
-			foreach(array_keys($this->usage_by_user[$username]) as $machine){
-				
-				$username = $username;
-				$mac = $machine;
+			foreach($machines as $mac => $usage_by_machine){
 
 				echo("<tr>");
+				// Only print the username if this is the first row
+				// the user appears in.
 				if($i == 1) {
 					echo("<td>$username</td>");
 				} else {
 					echo("<td></td>");
 				}
 				echo("<td>$mac</td>");
-				foreach($this->usage_by_user[$username][$machine] as $key => $value) {
+				foreach($this->usage_by_user[$username][$mac] as $key => $value) {
 					if(in_array($key, explode(" ", "up down oup odown"))){
 						$value = human_size($value * 1024);
+						if($display_offpeak == False){
+							if($key == "oup" || $key == "odown"){
+								echo("<td style=\"display: none;\">$value</td>");
+							} else {
+								echo("<td>$value</td>");
+							}
+						} else {
+							echo("<td>$value</td>");
+						}
+					} else if ($key == "last") {
+						echo("<td>$value</td>");
 					}
-
-					echo("<td>$value</td>");
 				}
 				echo("</tr>");
 
-				if($i == count($this->usage_by_user[$username])) {
+				// Output a user totals row if user has more than one machine
+				// and if users last machine has already been printed.
+				if($i == count($this->usage_by_user[$username]) && count($this->usage_by_user[$username]) > 1) {
 					echo("<tr class=\"user-totals-row\">");
 					echo("<td></td><td></td>");
 
 					$totals = array(
-						$this->user_total($username, "down"),
-						$this->user_total($username, "up"),
-						$this->user_total($username, "odown"),
-						$this->user_total($username, "oup")
+						"down" => $this->user_total($username, "down"),
+						"up" => $this->user_total($username, "up"),
+						"odown" => $this->user_total($username, "odown"),
+						"oup" => $this->user_total($username, "oup")
 					);
 
-					foreach($totals as $total){
-						$total = human_size($total * 1024);
-						echo("<td>$total</td>");
+					foreach($totals as $key => $value){
+						$total = human_size($value * 1024);
+						if($display_offpeak == True) {
+							echo("<td>$total</td>");
+						} else {
+							if($key == "odown" || $key == "oup"){
+								echo("<td style=\"display: none;\">$total</td>");
+							} else {
+								echo("<td>$total</td>");
+							}
+						}
+
 					}
 
 					echo("<td></td>");
@@ -221,16 +241,24 @@ class BWDatabase{
 			}
 		}
 		
+		// Output grand totals row.
 		echo("<tr class=\"totals-row\">");
 		$totals = $this->total();
-
 		echo("<td></td><td></td>");
-		foreach($totals as $total){
-			$total = human_size($total * 1024);
-			echo("<td>$total</td>");
+		foreach($totals as $key => $value){
+			$total = human_size($value * 1024);
+			if($display_offpeak == True){
+				echo("<td>$total</td>");
+			} else {
+				if($key == "odown" || $key == "oup"){
+					echo("<td style=\"display: none;\">$total</td>");
+				} else {
+					echo("<td>$total</td>");
+				}
+			}
 		}
-
 		echo("</tr>");
+
 	?>
 
 </table>
@@ -247,13 +275,16 @@ $bwdb = new BWDatabase($WRTBWMON_DB, $ALIASES);
 ?>
 
 <html>
-<head><title></title></head>
+<head>
+	<title>DD-WRT Bandwidth Monitor</title>
+	<link rel="stylesheet" type="text/css" href="css/base.css" />
+</head>
 
 <body>
 
-	<h1></h1>
+	<h1>DD-WRT Bandwidth Monitor</h1>
 
-	<?php $bwdb->output_as_table(); ?>
+	<?php $bwdb->output_as_table($display_offpeak = False); ?>
 
 </body>
 
