@@ -4,11 +4,6 @@
 wrtbwmon_php
 */
 
-// This should point to the database that wrtbwmon creates.
-$WRTBWMON_DB = getcwd() . "/" . "usage.db";
-// Points to aliases file.
-$ALIASES = getcwd() . "/" . "alias.txt";
-
 function human_size($size, $decimals = 1){
 	// http://www.jonasjohn.de/snippets/php/readable-filesize.htm
 	$mod = 1024;
@@ -20,7 +15,7 @@ function human_size($size, $decimals = 1){
 	return round($size, 2) . ' ' . $units[$i];
 }
 
-class BWDatabase{
+class WRTBWMON{
 
 		public $usage_by_user;
 		public $quota;
@@ -74,7 +69,7 @@ class BWDatabase{
 					"oup"	=> $line[4] * 1024,
 					"last"	=> $line[5]
 				);
-			} //ends foreach
+			}
 			$this->usage = $usage;
 		}
 
@@ -122,13 +117,10 @@ class BWDatabase{
 			}
 
 			$total = 0;
-
 			foreach($this->usage_by_user[$username] as $machine){
 				$total += $machine[$attribute];
 			}
-
 			return $total;
-
 		}
 
 		function total(){
@@ -275,27 +267,5 @@ class BWDatabase{
 
 <?php
 		} // ends output_as_table
-
-} // ends BWDatabase
-
-
-
-$bwdb = new BWDatabase($WRTBWMON_DB, $ALIASES);
-
+} // ends WRTBWMON class
 ?>
-
-<html>
-<head>
-	<title></title>
-	<link rel="stylesheet" type="text/css" href="css/base.css" />
-</head>
-
-<body>
-
-	<h1></h1>
-
-	<?php $bwdb->output_as_table($display_offpeak = False); ?>
-
-</body>
-
-</html>
