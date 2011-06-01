@@ -2,27 +2,37 @@
 wrtbwmon_php stylesheet
 */
 
-*{
-	font-family: Verdana, sans-serif;
-}
-
-#usage-by-user-table{
-	
-}
-
-#usage-by-user-table tr{
-	
-}
-
-#usage-by-user-table td{
-	
-}
-
-.user-totals-row{
-	background: gray;
-}
-
-.grand-total-cell{
-	background: red;
+.strong{
 	font-weight: bold;
 }
+
+table {
+	font: 11px/24px Verdana, Arial, Helvetica, sans-serif;
+	border-collapse: collapse;
+	width: 600px;
+	}
+
+th {
+	padding: 0 0.5em;
+	text-align: left;
+	}
+
+tr.yellow th {
+	border-top: 1px solid #FB7A31;
+	border-bottom: 1px solid #FB7A31;
+	background: #FFC;
+	}
+
+td {
+	border-bottom: 1px solid #CCC;
+	padding: 0 0.5em;
+	}
+
+td:first-child {
+	width: 50px;
+	}
+
+td+td {
+	border-left: 1px solid #CCC;
+	text-align: center;
+	}

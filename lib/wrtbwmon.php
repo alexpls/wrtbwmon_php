@@ -15,6 +15,17 @@ function human_size($size, $decimals = 1){
 	return round($size, 2) . ' ' . $units[$i];
 }
 
+function recursive_array_search($needle,$haystack) {
+	// Thanks buddel & tony @ http://php.net/manual/en/function.array-search.php
+    foreach($haystack as $key=>$value) {
+        $current_key=$key;
+        if($needle===$value OR (is_array($value) && recursive_array_search($needle,$value) !== false)) {
+            return $current_key;
+        }
+    }
+    return false;
+}
+
 class WRTBWMON{
 
 		public $usage_by_user;
@@ -96,18 +107,15 @@ class WRTBWMON{
 
 			$usage_by_user = array();
 
-			$users = array_keys($this->aliases);
-
-			foreach($users as $user){
-				$machines = $this->aliases[$user];
-				foreach($machines as $machine){
-					// if our machine has been registered by dd-wrt
-					// in the database, then add it to $usage_by_user
-					if(array_key_exists($machine, $this->usage)){
-						$usage_by_user[$user][$machine] = $this->usage[$machine];
-					}
+			foreach($this->usage as $mac => $usage){
+				$user = recursive_array_search($mac, $this->aliases);
+				if($user != false){
+					$usage_by_user[$user][$mac] = $usage;
+				} else {
+					$usage_by_user["unknown"][$mac] = $usage;
 				}
 			}
+
 			$this->usage_by_user = $usage_by_user;
 		}
 
@@ -147,19 +155,32 @@ class WRTBWMON{
 
 		}
 
-		function array_values_as_cells($array, $hidden_keys = ""){
+		function output_html_tag($tag, $contents, $attributes = ""){
+			$output = "<" . $tag;
+			if($attributes != ""){
+				$output .= " " . $attributes;
+			}
+			$output .= ">" . $contents . "</" . $tag . ">";
+
+			return $output;
+		}
+
+		function array_values_as_cells($array, $hidden_keys = "", $attributes = ""){
+			# TODO
+			# there should be a separate function that handles td behaviour, its opts,
+			# classes, etc.
 			$output = "";
 			if(!$hidden_keys){
 				foreach($array as $key => $value) {
-					$output .= "<td>$value</td>";
+					$output .= $this->output_html_tag("td", $value, $attributes);
 				}
 			} else {
 				$hidden_keys = explode(" ", $hidden_keys);
 				foreach($array as $key => $value) {
 					if(!in_array($key, $hidden_keys)){
-						$output .= "<td>$value</td>";
+						$output .= $this->output_html_tag("td", $value, $attributes);
 					} else {
-						$output .= "<td style=\"display: none;\">$value</td>";
+						$output .= $this->output_html_tag("td", $value, "style=\"display: none;\" " . $attributes);
 					}
 				}
 			}
@@ -173,7 +194,7 @@ class WRTBWMON{
 ?>
 
 <table id="usage-by-user-table">
-	<tr>
+	<tr class="yellow">
 		<th>User</th>
 		<th>MAC Address</th>
 		<th>Data Down</th>
@@ -254,12 +275,12 @@ class WRTBWMON{
 		echo("<td></td><td></td>");
 
 		if($display_offpeak == True){
-			echo($this->array_values_as_cells($totals));
+			echo($this->array_values_as_cells($totals, $class = "strong"));
 		} else {
-			echo($this->array_values_as_cells($totals, "oup odown"));
+			echo($this->array_values_as_cells($totals, $hidden_keys = "oup odown", $attributes = "class=\"strong\""));
 		}
 
-		echo("</tr>");
+		echo("<td></td></tr>");
 
 	?>
 
