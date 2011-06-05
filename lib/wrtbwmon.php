@@ -23,12 +23,12 @@ class WRTBWMON{
 			// TODO: if aliases validates...
 			$this->aliases_file = fopen($ALIASES_PATH, "r");
 			$this->calculate_usage_by_user();
-            
+
 			// TODO
-            $this->quota = $BW_QUOTA;
-            if($this->quota){
-                
-            }
+			$this->quota = $BW_QUOTA;
+			if($this->quota){
+				
+			}
 
 		}
 
@@ -196,16 +196,10 @@ class WRTBWMON{
 			}
 			return $output;
 		}
-        
-		// TODO
-        function stats_array(){
-            /*
-            Returns an array of statistics.
-            */
-            if($this->quota){
-                
-            }
-        }
+
+		function stats_array(){
+			// TODO
+		}
 
 		function output_as_table($display_offpeak = True){
 			if($this->usage_by_user == False){
@@ -305,9 +299,7 @@ class WRTBWMON{
 	?>
 
 </table>
-
 <?php
 		} // ends output_as_table
-        
 } // ends WRTBWMON class
 ?>
