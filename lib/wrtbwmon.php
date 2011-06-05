@@ -1,35 +1,34 @@
 <?php
 
-/*
-wrtbwmon_php
-*/
-
-function human_size($size, $decimals = 1){
-	// http://www.jonasjohn.de/snippets/php/readable-filesize.htm
+function human_size($size, $decimals = 2){
+	// Thanks http://www.jonasjohn.de/snippets/php/readable-filesize.htm
 	$mod = 1024;
 
 	$units = explode(" ", "B KB MB GB TB PB");
 	for ($i = 0; $size > $mod; $i++){
 		$size /= $mod;
 	}
-	return round($size, 2) . ' ' . $units[$i];
+	return round($size, $decimals) . ' ' . $units[$i];
 }
 
 function recursive_array_search($needle,$haystack) {
 	// Thanks buddel & tony @ http://php.net/manual/en/function.array-search.php
-    foreach($haystack as $key=>$value) {
-        $current_key=$key;
-        if($needle===$value OR (is_array($value) && recursive_array_search($needle,$value) !== false)) {
-            return $current_key;
-        }
-    }
-    return false;
+	foreach($haystack as $key=>$value) {
+		$current_key=$key;
+		if($needle===$value OR (is_array($value) && recursive_array_search($needle,$value) !== false)) {
+			return $current_key;
+		}
+	}
+	return false;
 }
 
 class WRTBWMON{
+		/*
+		TODO: Operation enabled without aliases textfile.
+		*/
 
 		public $usage_by_user;
-		public $quota;
+		// public $quota;
 
 		private $usage;
 		private $aliases;
@@ -38,9 +37,12 @@ class WRTBWMON{
 		protected $aliases_file;
 
 		function __construct($DB_PATH, $ALIASES_PATH){
-			if(!$DB_PATH && !$ALIASES_PATH) raise;
-
-			if ($this->validate_db($DB_PATH) != True) raise;
+			if(!$DB_PATH && !$ALIASES_PATH){
+				throw new Exception("Missing argument: This class requires $DB_PATH and $ALIASES_PATH to be set upon instatiation.");
+			}
+			
+			$this->validate_db($DB_PATH);
+			
 			$this->db_file = fopen($DB_PATH, "r");
 			// if aliases validates...
 			$this->aliases_file = fopen($ALIASES_PATH, "r");
@@ -51,14 +53,23 @@ class WRTBWMON{
 
 		function validate_db($DB_PATH){
 			// Database validation.
-			// **Really needs to be worked on...
+			// TODO: Needs to be worked on...
 			if (!file_exists($DB_PATH)) {
-				return False;
+				throw new Exception("Database did not validate: $DB_PATH does not exist.");
 			}
-			return True;
 		}
 
 		function output_lines($text_file){
+			/*
+			Returns a zero-indexed array of all the lines in a supplied text file.
+
+			RETURN EXAMPLE:
+			$lines = array(
+				0 => "this is the first line of your text file.",
+				1 => "this is the second line of your text file.",
+				2 => "this is the third line of your text file."
+			);
+			*/
 			$lines = array();
 			while(True){
 				$line = fgets($text_file);
@@ -69,6 +80,21 @@ class WRTBWMON{
 		}
 
 		function usage_array(){
+			/*
+			Asigns $this->usage variable as an array of processed data from the wrtbwmon usage database.
+
+			So far the only processing going on is converting the original WRTBWMON's output of file sizes as KB to file sizes as bytes.
+
+			EXAMPLE:
+			$this->usage = array(
+				"MAC ADDRESS" => array(
+					"down" =>	"DOWNLOADED",
+					"up =>		"UPLOADED",
+					"odown" =>	"OFFPEAK DOWNLOADED",
+					"oup" =>	"OFFPEAK UPLOADED",
+					"last" =>	"LAST SEEN")
+			);
+			*/
 			$usage = array();
 			$lines = $this->output_lines($this->db_file);
 			foreach($lines as $line){
@@ -85,6 +111,9 @@ class WRTBWMON{
 		}
 
 		function aliases_array(){
+			/*
+			Assigns $this->array variable as an array of processed data from the aliases text file.
+			*/
 			$aliases = array();
 			$lines = $this->output_lines($this->aliases_file);
 			foreach ($lines as $line){
