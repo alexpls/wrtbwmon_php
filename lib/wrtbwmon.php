@@ -1,6 +1,9 @@
 <?php
 
 function human_size($input, $desired_output = Null, $decimals = 2){
+	/*
+	TODO: Make it work with fractions eg: .25GB.
+	*/
     $mod = 1024;
     $units = explode(" ", "B KB MB GB TB PB");
     $size = 0;
@@ -59,22 +62,14 @@ class WRTBWMON{
 		protected $db_file;
 		protected $aliases_file;
 
-<<<<<<< HEAD
-		function __construct($DB_PATH, $ALIASES_PATH){
+		function __construct($DB_PATH, $ALIASES_PATH = Null, $BW_QUOTA = Null){
 			if(!$DB_PATH && !$ALIASES_PATH){
 				throw new Exception("Missing argument: This class requires $DB_PATH and $ALIASES_PATH to be set upon instatiation.");
 			}
 			
 			$this->validate_db($DB_PATH);
-			
-=======
-		function __construct($DB_PATH, $ALIASES_PATH, $BW_QUOTA = Null){
-			if(!$DB_PATH && !$ALIASES_PATH) raise;
-
-			if ($this->validate_db($DB_PATH) != True) raise;
->>>>>>> 0db5173267c1a9912e80efe666e9adb465ed5777
 			$this->db_file = fopen($DB_PATH, "r");
-			// if aliases validates...
+			// TODO: if aliases validates...
 			$this->aliases_file = fopen($ALIASES_PATH, "r");
 			$this->calculate_usage_by_user();
             
