@@ -4,15 +4,39 @@
 wrtbwmon_php
 */
 
-function human_size($size, $decimals = 1){
-	// http://www.jonasjohn.de/snippets/php/readable-filesize.htm
-	$mod = 1024;
+function human_size($input, $desired_output = Null, $decimals = 2){
+    $mod = 1024;
+    $units = explode(" ", "B KB MB GB TB PB");
+    $size = 0;
+        
+    $pattern = "/(?P<size>\d+)(?P<prefix>" . implode("|", $units) . ")/i";
+    preg_match($pattern, $input, $match);
+    if(!$match OR $match['prefix'] == "B"){
+        // No unit specified, so assume we're using bytes.
+        // OR... Bytes already specified, so no additional processing needs to be done.
+        // Easy does it!
+        $size = (int)$input;
+    } else {
+        // Unit specified. Convert it into bytes for further processing.
+        $place_in_array = array_search($match['prefix'], $units);
+        $size = $match['size'] * pow($mod, $place_in_array);
+    }
+    
+    if($desired_output == Null){
+        // Assume that desired output is best fit.
+        for($i = 0; $size > $mod; $i++){
+            $size /= $mod;
+        }
+        return round($size, $decimals) . ' ' . $units[$i];
+    } else if (in_array($desired_output, $units)) {
+        // If we know the unit that was specified.
+        $place_in_array = array_search($desired_output, $units);
+        $new_size = $size / pow($mod, $place_in_array);
+        return round($new_size, $decimals) . ' ' . $desired_output;
+    } else {
+        throw new Exception("Type error: Unknown unit \"$desired_output\" specified for conversion.");
+    }
 
-	$units = explode(" ", "B KB MB GB TB PB");
-	for ($i = 0; $size > $mod; $i++){
-		$size /= $mod;
-	}
-	return round($size, 2) . ' ' . $units[$i];
 }
 
 function recursive_array_search($needle,$haystack) {
@@ -37,15 +61,19 @@ class WRTBWMON{
 		protected $db_file;
 		protected $aliases_file;
 
-		function __construct($DB_PATH, $ALIASES_PATH){
+		function __construct($DB_PATH, $ALIASES_PATH, $BW_QUOTA = Null){
 			if(!$DB_PATH && !$ALIASES_PATH) raise;
 
 			if ($this->validate_db($DB_PATH) != True) raise;
 			$this->db_file = fopen($DB_PATH, "r");
 			// if aliases validates...
 			$this->aliases_file = fopen($ALIASES_PATH, "r");
-
 			$this->calculate_usage_by_user();
+            
+            $this->quota = $BW_QUOTA;
+            if($this->quota){
+                
+            }
 
 		}
 
@@ -186,6 +214,15 @@ class WRTBWMON{
 			}
 			return $output;
 		}
+        
+        function stats_array(){
+            /*
+            Returns an array of statistics.
+            */
+            if($this->quota){
+                
+            }
+        }
 
 		function output_as_table($display_offpeak = True){
 			if($this->usage_by_user == False){
@@ -288,5 +325,6 @@ class WRTBWMON{
 
 <?php
 		} // ends output_as_table
+        
 } // ends WRTBWMON class
 ?>
