@@ -1,4 +1,27 @@
 <?php
+class MyException extends Exception{
+	
+	protected $fatal;
+
+	public function __construct($message, $fatal = False, $code = 0, Exception $previous = null){
+		$this->fatal = $fatal;
+		parent::__construct($message, $code, $previous);
+	}
+
+	public function is_fatal(){
+		if($this->fatal == True){
+			return True;
+		} else {
+			return False;
+		}
+	}
+
+	public function getArray(){
+		$x = array($this->message => $this->fatal);
+		return $x;
+	}
+}
+
 class WRTBWMON{
 		/*
 		TODO: Operation enabled without aliases textfile.
@@ -6,6 +29,7 @@ class WRTBWMON{
 
 		public $usage_by_user;
 		public $quota;
+		public $errors;
 
 		private $usage;
 		private $aliases;
@@ -14,29 +38,78 @@ class WRTBWMON{
 		protected $aliases_file;
 
 		function __construct($DB_PATH, $ALIASES_PATH = Null, $BW_QUOTA = Null){
-			if(!$DB_PATH && !$ALIASES_PATH){
-				throw new Exception("Missing argument: This class requires $DB_PATH and $ALIASES_PATH to be set upon instatiation.");
+			try{
+				$this->init_db($DB_PATH);
+			} catch(MyException $e) {
+				$this->errors[] = $e->getArray();
+			}
+
+			try{
+				if($ALIASES_PATH) {
+					$this->init_aliases($ALIASES_PATH);
+				}
+			} catch(MyException $e) {
+				$this->errors[] = $e->getArray();
 			}
 			
-			$this->validate_db($DB_PATH);
-			$this->db_file = fopen($DB_PATH, "r");
-			// TODO: if aliases validates...
-			$this->aliases_file = fopen($ALIASES_PATH, "r");
-			$this->calculate_usage_by_user();
-
-			// TODO
-			$this->quota = $BW_QUOTA;
-			if($this->quota){
-				
+			if($this->errors){
+				$this->render_errors();
 			}
+
+			// // TODO
+			// $this->quota = $BW_QUOTA;
+			// if($this->quota){
+				
+			// }
 
 		}
 
-		function validate_db($DB_PATH){
+		function render_errors($exit_on_fatal = True){
+			// TODO is this ok ?
+			if(!$this->errors){
+				throw new MyException("Trying to render errors to HTML, but no errors exist!", $fatal = False);
+			}
+
+			$fatal = False;
+
+			foreach($this->errors as $counter => $exception){
+				foreach($exception as $message => $fatality){
+					$output = "<strong>";
+					if($fatality){
+						$fatal = True;
+						$output .= "Fatal ";
+					}
+					$output .= "Error:</strong> $message<br />";
+
+					print($output);
+				}
+				unset($this->errors[$counter]);
+			}
+			if($exit_on_fatal){
+				if($fatal){
+					exit();
+				}
+			}
+		}
+
+		function init_db($PATH) {
 			// Database validation.
 			// TODO: Needs to be worked on...
-			if (!file_exists($DB_PATH)) {
-				throw new Exception("Database did not validate: $DB_PATH does not exist.");
+			if(!$PATH) {
+				throw new MyException("Database did not validate: You must specify a database path in init.php .", $fatal = True);
+			}
+			else if (!file_exists($PATH)) {
+				throw new MyException("Database did not validate: $PATH does not exist.", $fatal = True);
+			} else {
+				$this->db_file = fopen($PATH, "r");
+			}
+		}
+
+		function init_aliases($PATH) {
+			if(!file_exists($PATH)) {
+				throw new MyException("Aliases file did not validate: $PATH does not exist.");
+			} else {
+				$this->aliases_file = fopen($PATH, "r");
 			}
 		}
 
@@ -95,6 +168,9 @@ class WRTBWMON{
 			/*
 			Assigns $this->array variable as an array of processed data from the aliases text file.
 			*/
+			if(!$this->aliases_file){
+				return False;
+			}
 			$aliases = array();
 			$lines = $this->output_lines($this->aliases_file);
 			foreach ($lines as $line){
@@ -117,16 +193,20 @@ class WRTBWMON{
 
 			$usage_by_user = array();
 
+
 			foreach($this->usage as $mac => $usage){
-				$user = recursive_array_search($mac, $this->aliases);
-				if($user != false){
+				$user = "";
+				if($this->aliases){
+					$user = recursive_array_search($mac, $this->aliases);
+				}
+				if($user){
 					$usage_by_user[$user][$mac] = $usage;
 				} else {
 					$usage_by_user["unknown"][$mac] = $usage;
 				}
 			}
-
 			$this->usage_by_user = $usage_by_user;
+
 		}
 
 		function user_total($username, $attribute){
@@ -202,7 +282,10 @@ class WRTBWMON{
 		}
 
 		function output_as_table($display_offpeak = True){
-			if($this->usage_by_user == False){
+			if($this->errors){
+				$this->render_errors();
+			}
+			if(!$this->usage_by_user){
 				$this->calculate_usage_by_user();
 			}
 ?>
