@@ -14,7 +14,6 @@ $bwmon = new WRTBWMON(WRTDB_PATH, ALIAS_PATH);
 <h1>WRTBWMON Stats</h1>
 
 <?php $bwmon->output_as_table($display_offpeak = False); ?>
-<?php // print_r($bwmon->usage_by_user); ?>
 
 </body>
 

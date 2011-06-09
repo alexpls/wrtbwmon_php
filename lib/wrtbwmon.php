@@ -1,31 +1,5 @@
 <?php
-class MyException extends Exception{
-	
-	protected $fatal;
-
-	public function __construct($message, $fatal = False, $code = 0, Exception $previous = null){
-		$this->fatal = $fatal;
-		parent::__construct($message, $code, $previous);
-	}
-
-	public function is_fatal(){
-		if($this->fatal == True){
-			return True;
-		} else {
-			return False;
-		}
-	}
-
-	public function getArray(){
-		$x = array($this->message => $this->fatal);
-		return $x;
-	}
-}
-
 class WRTBWMON{
-		/*
-		TODO: Operation enabled without aliases textfile.
-		*/
 
 		public $usage_by_user;
 		public $quota;
@@ -33,11 +7,18 @@ class WRTBWMON{
 
 		private $usage;
 		private $aliases;
+		private $stats;
 
 		protected $db_file;
 		protected $aliases_file;
 
 		function __construct($DB_PATH, $ALIASES_PATH = Null, $BW_QUOTA = Null){
+			try{
+				$this->init_stats();
+			} catch(MyException $e) {
+				$this->errors[] = $e->getArray();
+			}
+
 			try{
 				$this->init_db($DB_PATH);
 			} catch(MyException $e) {
@@ -51,7 +32,7 @@ class WRTBWMON{
 			} catch(MyException $e) {
 				$this->errors[] = $e->getArray();
 			}
-			
+
 			if($this->errors){
 				$this->render_errors();
 			}
@@ -92,9 +73,43 @@ class WRTBWMON{
 			}
 		}
 
+		function init_stats(){
+			/*
+			Initialises a blank stats array.
+			*/
+			$stats = array(
+				"num_known_users"	=> 0,
+				"num_machines"  	=> 0,
+				"total_down"		=> 0,
+				"total_up"			=> 0
+			);
+			$this->stats = $stats;
+		}
+
+		function get_stats_array(){
+			$this->stats = $stats;
+
+			try{
+				$counter = 0;
+				while(!$this->stats["num_machines"]){
+					if($counter == 1){
+						throw new MyException("Stats error: It looks like you're trying to fetch the stats array, but no data could be extracted from your database!", $fatal = False);
+					}
+					$this->usage_array();
+					$this->aliases_array();
+					$counter++;
+				}
+			} catch (MyException $e) {
+				$this->errors[] = $e->getArray();
+				$this->render_errors();
+				return False;
+			}
+
+			return $stats;
+		}
+
 		function init_db($PATH) {
 			// Database validation.
-			// TODO: Needs to be worked on...
 			if(!$PATH) {
 				throw new MyException("Database did not validate: You must specify a database path in init.php .", $fatal = True);
 			}
@@ -103,6 +118,8 @@ class WRTBWMON{
 			} else {
 				$this->db_file = fopen($PATH, "r");
 			}
+
+			return True;
 		}
 
 		function init_aliases($PATH) {
@@ -111,6 +128,8 @@ class WRTBWMON{
 			} else {
 				$this->aliases_file = fopen($PATH, "r");
 			}
+
+			return True;
 		}
 
 		function output_lines($text_file){
@@ -160,8 +179,14 @@ class WRTBWMON{
 					"oup"	=> $line[4] * 1024,
 					"last"	=> $line[5]
 				);
+				// Adding to stats...
+				$this->stats["num_machines"] += 1;
+				$this->stats["total_down"] += $line[1] * 1024 + $line[3] * 1024;
+				$this->stats["total_up"] += $line[2] * 1024 + $line[4] * 1024;
 			}
+
 			$this->usage = $usage;
+			return True;
 		}
 
 		function aliases_array(){
@@ -175,25 +200,45 @@ class WRTBWMON{
 			$lines = $this->output_lines($this->aliases_file);
 			foreach ($lines as $line){
 				$line = explode(",", $line);
-				if (array_key_exists($line[1], $aliases)) {
-					array_push($aliases[$line[1]], $line[0]);
+				$mac = $line[0];
+				$user = $line[1];
+				if (array_key_exists($user, $aliases)) {
+					array_push($aliases[$user], $mac);
 				} else {
-					$aliases[$line[1]] = array($line[0]);
+					$aliases[$user] = array($mac);
 				}
 			}
+			// Adding to stats.
+			$this->stats["num_known_users"] = count($aliases);
+			
 			$this->aliases = $aliases;
+			return True;
 		}
 
 		function calculate_usage_by_user(){
-			
+			/*
+			Assigns $this->usage_by_user array with a tie-in of the usage 
+			array and the aliases array (if one exists).
+
+			EXAMPLE:
+			array = (
+				"steve" => array(
+					"MAC #1" => array(
+						"down"	=> 123
+						"up"	=> 123
+						"odown"	=> 123
+						"oup"	=> 123
+						"last"	=> "01-01-2001 01:01"
+					)
+				)
+			)
+			*/
 			if(!$this->aliases && !$this->usage) {
 				$this->aliases_array();
 				$this->usage_array();
 			}
 
 			$usage_by_user = array();
-
-
 			foreach($this->usage as $mac => $usage){
 				$user = "";
 				if($this->aliases){
@@ -202,11 +247,12 @@ class WRTBWMON{
 				if($user){
 					$usage_by_user[$user][$mac] = $usage;
 				} else {
+					// If the mac address does not match with one in
+					// our aliases file, create the user: "unknown""
 					$usage_by_user["unknown"][$mac] = $usage;
 				}
 			}
 			$this->usage_by_user = $usage_by_user;
-
 		}
 
 		function user_total($username, $attribute){
@@ -277,8 +323,8 @@ class WRTBWMON{
 			return $output;
 		}
 
-		function stats_array(){
-			// TODO
+		function output_stats($output = "html"){
+
 		}
 
 		function output_as_table($display_offpeak = True){

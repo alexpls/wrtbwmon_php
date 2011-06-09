@@ -16,6 +16,7 @@ if(!$FIXTURES){
 }
 
 require_once("helpers.php");
+require_once("exceptions.php");
 require_once("wrtbwmon.php");
 
 ?>
