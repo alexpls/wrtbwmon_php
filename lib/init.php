@@ -9,14 +9,13 @@ if(!$FIXTURES){
 	define("ALIAS_PATH", 	"");
 } else {
 	// Load in fixtures.
-	$WRTDB_PATH = getcwd() . "\\" . "fixtures\\usage.db";
-	$ALIAS_PATH = getcwd() . "\\" . "fixtures\\alias.txt";
+	$WRTDB_PATH = getcwd() . "/" . "fixtures/usage.db";
+	$ALIAS_PATH = getcwd() . "/" . "fixtures/alias.txt";
 	define("WRTDB_PATH",	$WRTDB_PATH);
 	define("ALIAS_PATH",	$ALIAS_PATH);
 }
 
 require_once("helpers.php");
-require_once("exceptions.php");
 require_once("wrtbwmon.php");
 
 ?>

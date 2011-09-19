@@ -1,4 +1,28 @@
 <?php
+
+class MyException extends Exception{
+
+	protected $fatal;
+
+	public function __construct($message, $fatal = False, $code = 0, Exception $previous = null){
+		$this->fatal = $fatal;
+		parent::__construct($message, $code, $previous);
+	}
+
+	public function is_fatal(){
+		if($this->fatal == True){
+			return True;
+		} else {
+			return False;
+		}
+	}
+
+	public function getArray(){
+		$x = array($this->message => $this->fatal);
+		return $x;
+	}
+}
+
 class WRTBWMON{
 
 		public $usage_by_user;
